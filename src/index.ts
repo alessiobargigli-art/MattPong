@@ -1,7 +1,4 @@
-export interface Env {
-  ROOMS: DurableObjectNamespace<GameRoom>;
-  ASSETS: Fetcher;
-}
+import { DurableObject } from "cloudflare:workers";
 
 type PlayerSide = "left" | "right";
 type ClientMessage = { type: "move"; y: number } | { type: "ping" };
