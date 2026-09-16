@@ -44,6 +44,10 @@ export default {
       const id = env.ROOMS.idFromName(code);
       return env.ROOMS.get(id).fetch(request);
     }
+    if (/^\/room\/[A-Z0-9]{6}\/?$/i.test(url.pathname)) {
+      const indexUrl = new URL("/", request.url);
+      return env.ASSETS.fetch(new Request(indexUrl.toString(), request));
+    }
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
