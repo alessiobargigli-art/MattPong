@@ -16,9 +16,9 @@ const LEVELS={
   3:{speed:700,max:1450,label:'3'}
 };
 const CPU_PROFILES={
-  easy:{speed:300,reaction:.18,error:95,label:'FACILE'},
-  normal:{speed:430,reaction:.10,error:38,label:'NORMALE'},
-  hard:{speed:620,reaction:.045,error:10,label:'DIFFICILE'}
+  easy:{speed:500,reaction:.075,error:28,label:'FACILE',predict:false},
+  normal:{speed:620,reaction:.045,error:10,label:'NORMALE',predict:false},
+  hard:{speed:880,reaction:.018,error:2,label:'DIFFICILE',predict:true}
 };
 
 let mode=null,side='left',roomCode='',socket=null,state=null,lastState=null,lastStateAt=0;
@@ -129,11 +129,23 @@ const keys=new Set();addEventListener('keydown',e=>{keys.add(e.key.toLowerCase()
 
 function tickInput(dt){let y=side==='left'?local.leftY:local.rightY;const speed=650;if(keys.has('arrowup')||keys.has('w'))y-=speed*dt;if(keys.has('arrowdown')||keys.has('s'))y+=speed*dt;y=clampY(y);if(mode==='cpu')local.leftY=y;else if(mode==='online'&&keys.size&&socket?.readyState===WebSocket.OPEN){const n=y/H;if(side==='left')local.leftY=y;else local.rightY=y;socket.send(JSON.stringify({type:'move',y:n}));}}
 
+function predictedCpuInterceptY(){
+  if(local.vx<=0)return H/2;
+  const targetX=1506-BALL_R;
+  const time=Math.max(0,(targetX-local.ballX)/local.vx);
+  const minY=BALL_R,maxY=H-BALL_R,span=maxY-minY;
+  const projected=local.ballY+local.vy*time;
+  const raw=projected-minY;
+  const period=span*2;
+  const folded=((raw%period)+period)%period;
+  return folded<=span?minY+folded:maxY-(folded-span);
+}
+
 function stepCpu(dt){
   const profile=CPU_PROFILES[currentCpuDifficulty()];
   cpuReactionClock-=dt;
   if(cpuReactionClock<=0){
-    const base=local.vx>0?local.ballY:H/2;
+    const base=local.vx>0?(profile.predict?predictedCpuInterceptY():local.ballY):H/2;
     cpuTarget=clampY(base+(Math.random()*2-1)*profile.error);
     cpuReactionClock=profile.reaction;
   }
