@@ -7,6 +7,7 @@ const ctx=canvas.getContext('2d');
 const rotate=document.getElementById('rotate');
 const startLevelEl=document.getElementById('startLevel');
 const cpuDifficultyEl=document.getElementById('cpuDifficulty');
+const copyLinkBtn=document.getElementById('copyLinkBtn');
 
 const W=1600,H=900,PADDLE_HALF=90,BALL_R=18;
 const LEVELS={
@@ -29,6 +30,8 @@ function currentCpuDifficulty(){return CPU_PROFILES[cpuDifficultyEl.value]?cpuDi
 function setStatus(t){statusEl.textContent=t||'';document.getElementById('hint').textContent=t||'Trascina verticalmente per muovere la racchetta';}
 function showGame(label){roomLabel.textContent=label;menu.classList.add('hidden');game.classList.remove('hidden');syncOrientation();tryLandscape();}
 function wsUrl(code,level){const p=location.protocol==='https:'?'wss':'ws';const u=new URL(`${p}://${location.host}/ws/${code}`);if(level)u.searchParams.set('level',String(level));return u.toString();}
+function roomShareUrl(code){const u=new URL(location.href);u.search='';u.hash='';u.searchParams.set('room',code);return u.toString();}
+function setRoomUrl(code){history.replaceState(null,'',roomShareUrl(code));}
 async function createRoom(){const r=await fetch('/api/room/create',{method:'POST'});if(!r.ok)throw new Error('Creazione stanza fallita');return (await r.json()).code;}
 
 function ensureAudio(){
@@ -51,6 +54,25 @@ function playSfx(name){
   osc.connect(gain);gain.connect(audioCtx.destination);osc.start(now);osc.stop(now+.09);
 }
 
+async function copyRoomLink(){
+  if(!roomCode)return;
+  const url=roomShareUrl(roomCode);
+  let copied=false;
+  try{
+    if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(url);copied=true;}
+  }catch{}
+  if(!copied){
+    const text=document.createElement('textarea');
+    text.value=url;text.setAttribute('readonly','');text.style.position='fixed';text.style.opacity='0';
+    document.body.appendChild(text);text.select();
+    try{copied=document.execCommand('copy');}catch{}
+    text.remove();
+  }
+  const original=copyLinkBtn.textContent;
+  copyLinkBtn.textContent=copied?'COPIATO!':'COPIA FALLITA';
+  setTimeout(()=>{copyLinkBtn.textContent=original;},1400);
+}
+
 function connectRoom(code,hostLevel=null){return new Promise((resolve,reject)=>{
   socket=new WebSocket(wsUrl(code,hostLevel));
   socket.onopen=()=>resolve();
@@ -58,7 +80,9 @@ function connectRoom(code,hostLevel=null){return new Promise((resolve,reject)=>{
   socket.onmessage=e=>{
     let m;try{m=JSON.parse(e.data)}catch{return}
     if(m.type==='joined'){
-      side=m.side;roomCode=m.code;showGame(`STANZA ${roomCode}`);setStatus(side==='left'?`Condividi il codice ${roomCode}`:'Connesso. Si gioca!');
+      side=m.side;roomCode=m.code;setRoomUrl(roomCode);copyLinkBtn.classList.remove('hidden');
+      showGame(`STANZA ${roomCode}`);
+      setStatus(side==='left'?`Condividi il codice ${roomCode} o usa COPIA LINK`:'Connesso. Si gioca!');
     }else if(m.type==='state'){
       lastState=state;state=m;lastStateAt=performance.now();
       roomLabel.textContent=`STANZA ${roomCode} · LIVELLO ${m.level||2}`;
@@ -77,7 +101,7 @@ function resetLocalGame(level){
 }
 
 document.getElementById('cpuBtn').onclick=()=>{
-  ensureAudio();mode='cpu';side='left';state=null;lastState=null;
+  ensureAudio();mode='cpu';side='left';state=null;lastState=null;copyLinkBtn.classList.add('hidden');
   const level=currentLevel(),difficulty=currentCpuDifficulty();resetLocalGame(level);
   showGame(`1 VS CPU · LIVELLO ${level} · ${CPU_PROFILES[difficulty].label}`);
   setStatus('Trascina verticalmente per muovere la racchetta');
@@ -90,7 +114,8 @@ document.getElementById('joinBtn').onclick=async()=>{
   if(code.length!==6){setStatus('Inserisci un codice stanza di 6 caratteri.');return;}
   try{ensureAudio();mode='online';setStatus('Connessione…');await connectRoom(code);}catch(e){setStatus(e.message||'Errore');}
 };
-document.getElementById('backBtn').onclick=()=>location.reload();
+document.getElementById('backBtn').onclick=()=>{try{socket?.close();}catch{}location.assign(location.origin+location.pathname);};
+document.getElementById('copyLinkBtn').onclick=()=>copyRoomLink();
 document.getElementById('fullscreenBtn').onclick=async()=>{try{ensureAudio();if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();await tryLandscape();}catch{}};
 
 async function tryLandscape(){try{if(screen.orientation?.lock)await screen.orientation.lock('landscape');}catch{}}
@@ -148,4 +173,13 @@ function draw(){
   if(s.waiting){ctx.fillStyle='rgba(11,16,32,.78)';ctx.fillRect(0,0,W,H);drawText(`STANZA ${s.code}`,800,390,72);drawText('In attesa del secondo giocatore…',800,490,38);}
 }
 function drawText(t,x,y,size){ctx.fillStyle='#fff';ctx.font=`800 ${size}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,x,y);}
+
+async function joinSharedRoom(){
+  const code=(new URLSearchParams(location.search).get('room')||'').trim().toUpperCase();
+  if(!/^[A-Z0-9]{6}$/.test(code))return;
+  document.getElementById('roomInput').value=code;
+  try{mode='online';setStatus('Connessione alla stanza condivisa…');await connectRoom(code);}catch(e){setStatus(e.message||'Impossibile entrare nella stanza');}
+}
+
 draw();
+joinSharedRoom();
