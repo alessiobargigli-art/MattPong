@@ -1,6 +1,6 @@
 {
   "name": "mattpong",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "check": "tsc --noEmit"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260915.0",
+    "@cloudflare/workers-types": "latest",
     "typescript": "^5.9.2",
     "wrangler": "^4.35.0"
   }
