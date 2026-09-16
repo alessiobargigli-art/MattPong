@@ -13,6 +13,26 @@
     <section id="menu" class="panel">
       <h1>MattPong</h1>
       <p>Pong realtime, desktop e mobile.</p>
+
+      <div class="settings" aria-label="Impostazioni partita">
+        <label class="setting" for="startLevel">
+          <span>Livello iniziale</span>
+          <select id="startLevel">
+            <option value="1">1 · Lento</option>
+            <option value="2" selected>2 · Normale</option>
+            <option value="3">3 · Veloce</option>
+          </select>
+        </label>
+        <label class="setting" for="cpuDifficulty">
+          <span>Difficoltà CPU</span>
+          <select id="cpuDifficulty">
+            <option value="easy">Facile</option>
+            <option value="normal" selected>Normale</option>
+            <option value="hard">Difficile</option>
+          </select>
+        </label>
+      </div>
+
       <div class="actions">
         <button id="cpuBtn">1 VS CPU</button>
         <button id="createBtn">CREA STANZA</button>
