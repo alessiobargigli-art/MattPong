@@ -30,7 +30,7 @@ function currentCpuDifficulty(){return CPU_PROFILES[cpuDifficultyEl.value]?cpuDi
 function setStatus(t){statusEl.textContent=t||'';document.getElementById('hint').textContent=t||'Trascina verticalmente per muovere la racchetta';}
 function showGame(label){roomLabel.textContent=label;menu.classList.add('hidden');game.classList.remove('hidden');syncOrientation();tryLandscape();}
 function wsUrl(code,level){const p=location.protocol==='https:'?'wss':'ws';const u=new URL(`${p}://${location.host}/ws/${code}`);if(level)u.searchParams.set('level',String(level));return u.toString();}
-function roomShareUrl(code){const u=new URL(location.href);u.search='';u.hash='';u.searchParams.set('room',code);return u.toString();}
+function roomShareUrl(code){return `${location.origin}/room/${encodeURIComponent(code.toUpperCase())}`;}
 function setRoomUrl(code){history.replaceState(null,'',roomShareUrl(code));}
 async function createRoom(){const r=await fetch('/api/room/create',{method:'POST'});if(!r.ok)throw new Error('Creazione stanza fallita');return (await r.json()).code;}
 
@@ -70,6 +70,7 @@ async function copyRoomLink(){
   }
   const original=copyLinkBtn.textContent;
   copyLinkBtn.textContent=copied?'COPIATO!':'COPIA FALLITA';
+  setStatus(copied?`Link stanza copiato: ${url}`:'Impossibile copiare il link stanza');
   setTimeout(()=>{copyLinkBtn.textContent=original;},1400);
 }
 
@@ -80,9 +81,9 @@ function connectRoom(code,hostLevel=null){return new Promise((resolve,reject)=>{
   socket.onmessage=e=>{
     let m;try{m=JSON.parse(e.data)}catch{return}
     if(m.type==='joined'){
-      side=m.side;roomCode=m.code;setRoomUrl(roomCode);copyLinkBtn.classList.remove('hidden');
+      side=m.side;roomCode=m.code;setRoomUrl(roomCode);copyLinkBtn.classList.remove('hidden');copyLinkBtn.title=roomShareUrl(roomCode);
       showGame(`STANZA ${roomCode}`);
-      setStatus(side==='left'?`Condividi il codice ${roomCode} o usa COPIA LINK`:'Connesso. Si gioca!');
+      setStatus(side==='left'?`Condividi ${roomShareUrl(roomCode)} o usa COPIA LINK`:'Connesso. Si gioca!');
     }else if(m.type==='state'){
       lastState=state;state=m;lastStateAt=performance.now();
       roomLabel.textContent=`STANZA ${roomCode} · LIVELLO ${m.level||2}`;
@@ -114,7 +115,7 @@ document.getElementById('joinBtn').onclick=async()=>{
   if(code.length!==6){setStatus('Inserisci un codice stanza di 6 caratteri.');return;}
   try{ensureAudio();mode='online';setStatus('Connessione…');await connectRoom(code);}catch(e){setStatus(e.message||'Errore');}
 };
-document.getElementById('backBtn').onclick=()=>{try{socket?.close();}catch{}location.assign(location.origin+location.pathname);};
+document.getElementById('backBtn').onclick=()=>{try{socket?.close();}catch{}location.assign(`${location.origin}/`);};
 document.getElementById('copyLinkBtn').onclick=()=>copyRoomLink();
 document.getElementById('fullscreenBtn').onclick=async()=>{try{ensureAudio();if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();await tryLandscape();}catch{}};
 
@@ -187,7 +188,9 @@ function draw(){
 function drawText(t,x,y,size){ctx.fillStyle='#fff';ctx.font=`800 ${size}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,x,y);}
 
 async function joinSharedRoom(){
-  const code=(new URLSearchParams(location.search).get('room')||'').trim().toUpperCase();
+  const pathMatch=location.pathname.match(/^\/room\/([A-Z0-9]{6})\/?$/i);
+  const queryCode=(new URLSearchParams(location.search).get('room')||'').trim();
+  const code=(pathMatch?.[1]||queryCode).toUpperCase();
   if(!/^[A-Z0-9]{6}$/.test(code))return;
   document.getElementById('roomInput').value=code;
   try{mode='online';setStatus('Connessione alla stanza condivisa…');await connectRoom(code);}catch(e){setStatus(e.message||'Impossibile entrare nella stanza');}
