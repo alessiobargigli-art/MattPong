@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#0b1020" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/app.css" />
+  <title>MattPong</title>
+</head>
+<body>
+  <main id="app">
+    <section id="menu" class="panel">
+      <h1>MattPong</h1>
+      <p>Pong realtime, desktop e mobile.</p>
+      <div class="actions">
+        <button id="cpuBtn">1 VS CPU</button>
+        <button id="createBtn">CREA STANZA</button>
+      </div>
+      <div class="join">
+        <input id="roomInput" maxlength="6" placeholder="CODICE STANZA" autocomplete="off" autocapitalize="characters" />
+        <button id="joinBtn">ENTRA</button>
+      </div>
+      <p id="status"></p>
+    </section>
+
+    <section id="game" class="game hidden">
+      <div class="topbar">
+        <button id="backBtn" class="ghost">ESCI</button>
+        <div id="roomLabel"></div>
+        <button id="fullscreenBtn" class="ghost">FULLSCREEN</button>
+      </div>
+      <canvas id="canvas" width="1600" height="900"></canvas>
+      <div id="hint">Trascina verticalmente per muovere la racchetta</div>
+    </section>
+
+    <section id="rotate" class="rotate hidden">Ruota il telefono in orizzontale</section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
